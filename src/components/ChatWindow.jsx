@@ -2,18 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
 
-
-
-// const socket = io(import.meta.env.VITE_API_URL, {
-  //   auth: { token: localStorage.getItem("token") },
-  //   transports: ["websocket"],
-  //   reconnection:true,
-  //   reconnectionAttempts:5,
-  //   reconnectionDelay:1000
-  // });
-  
-  
-  
   
   export default function ChatWindow({ selectedUser }) {
     
@@ -109,6 +97,8 @@ import axios from "axios";
     };
   }, [selectedUser]);
 
+
+  // DB Use
   // useEffect(() => {
   //   if (!selectedUser._id || !socketConnected) return;
   //   const fetchMessages = async () => {
@@ -160,13 +150,7 @@ import axios from "axios";
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // useEffect(() => {
-  //   socket.on("note-shared", (payload) => {
-  //     setMessages((prev) => [...prev, payload]);
-  //   });
-  //   return () => socket.off("note-shared");
-  // }, []);
-
+ 
   useEffect(() => {
     socketRef.current?.on("note-shared", (payload) => {
       console.log(payload);
