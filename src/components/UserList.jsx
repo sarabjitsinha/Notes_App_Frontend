@@ -1,15 +1,59 @@
+// import { useEffect, useState } from "react";
+// import axios from "../api/axios";
+
+// export default function UserList({ onSelect }) {
+//   const [users, setUsers] = useState([]);
+
+//   useEffect(() => {
+//     axios
+//       .get(`${import.meta.env.VITE_API_URL}/api/chat/users`, {
+//         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+//       })
+//       .then((res) => setUsers(res.data));
+//   }, []);
+
+//   return (
+//     <div className="w-1/3 p-4 border-r h-full overflow-y-auto">
+//       <h2 className="text-lg font-semibold mb-2">Users</h2>
+//       {users.map((u) => (
+//         <div
+//           key={u._id}
+//           className="p-2 border-b cursor-pointer hover:bg-gray-100"
+//           onClick={() => onSelect(u)}
+//         >
+//           {u.username}
+//         </div>
+//       ))}
+//     </div>
+//   );
+// }
+
 import { useEffect, useState } from "react";
-import axios from "../api/axios";
+import axios from "axios";
 
 export default function UserList({ onSelect }) {
   const [users, setUsers] = useState([]);
+  const [groups, setGroups] = useState([]);
 
   useEffect(() => {
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/api/chat/users`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      })
-      .then((res) => setUsers(res.data));
+    const fetchData = async () => {
+      const token = localStorage.getItem("token");
+      const headers = { Authorization: `Bearer ${token}` };
+
+      try {
+        const [userRes, groupRes] = await Promise.all([
+          axios.get(`${import.meta.env.VITE_API_URL}/api/chat/users`, { headers }),
+          axios.get(`${import.meta.env.VITE_API_URL}/api/chat/groups`, { headers }),
+        ]);
+
+        setUsers(userRes.data);
+        setGroups(groupRes.data);
+      } catch (err) {
+        console.error("Failed to fetch user/group data:", err);
+      }
+    };
+
+    fetchData();
   }, []);
 
   return (
@@ -19,9 +63,24 @@ export default function UserList({ onSelect }) {
         <div
           key={u._id}
           className="p-2 border-b cursor-pointer hover:bg-gray-100"
-          onClick={() => onSelect(u)}
+          onClick={() =>
+            onSelect({ type: "private", id: u._id, name: u.username })
+          }
         >
           {u.username}
+        </div>
+      ))}
+
+      <h2 className="text-lg font-semibold mt-4 mb-2">Groups</h2>
+      {groups.map((g) => (
+        <div
+          key={g._id}
+          className="p-2 border-b cursor-pointer hover:bg-green-100"
+          onClick={() =>
+            onSelect({ type: "group", id: g._id, name: g.name })
+          }
+        >
+          👥 {g.name}
         </div>
       ))}
     </div>
