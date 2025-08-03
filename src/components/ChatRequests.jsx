@@ -4,33 +4,36 @@ import axios from "axios";
 
 export default function ChatRequests({ refreshGroups }) {
   const [pendingGroups, setPendingGroups] = useState([]);
+  // eslint-disable-next-line no-unused-vars
   const [showAlert, setShowAlert] = useState(false);
 
   const token = localStorage.getItem("token");
-  const user = localStorage.getItem("user").toString();
+ 
+ const userId = localStorage.getItem("user");
 
   useEffect(() => {
-    if (!user || !token) return;
+    const fetchGroups = async () => {
+      try {
+        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/chat/groups`, {headers:{Authorization:`Bearer ${token}`}});
+        const data = res.data;
 
-    axios
-      .get(`${import.meta.env.VITE_API_URL}/api/chat/groups`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-      .then((res) => {
-        console.log(res);
-        const groups = res.data.filter(
-          (g) => !g.approvedBy.includes(user._id)
-          // (g) =>
-          //   !g.approvedBy
-          //     .map((id) => id.toString())
-          //     .includes(user._id.toString())
-        );
+        const filtered = data.filter((group) => {
+          const memberIds = group.members.map((m) => m.toString());
+          const approvedIds = group.approvedBy.map((a) => a.toString());
 
-        setPendingGroups(groups);
-        setShowAlert(groups.length > 0);
-        // refreshGroups()
-      });
-  }, [token, user]);
+          return memberIds.includes(userId) && !approvedIds.includes(userId);
+        });
+
+
+        setPendingGroups(filtered);
+      } catch (err) {
+        console.error("Failed to fetch groups:", err);
+      }
+    };
+
+    fetchGroups();
+  }, [userId,token]);
+
 
   const respond = async (groupId, accept) => {
     await axios.post(
@@ -58,7 +61,7 @@ export default function ChatRequests({ refreshGroups }) {
         <p className="text-sm text-gray-500">No pending requests</p>
       ) : (
         <ul className="mt-2 space-y-2">
-          {pendingGroups.map((g) => (
+          {pendingGroups?.map((g) => (
             <li key={g._id} className="border p-2 rounded">
               <span className="block font-medium">{g.name}</span>
               <div className="mt-1 flex gap-2">
