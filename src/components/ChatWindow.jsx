@@ -5,24 +5,21 @@ import axios from "axios";
   
   export default function ChatWindow({ selectedUser }) {
     
-    const socketRef=useRef(null);
-    const [messages, setMessages] = useState([]);
-    const [msg, setMsg] = useState("");
-    const [typing, setTyping] = useState(false);
-    const [isTyping, setIsTyping] = useState(false);
-    const [availableNotes, setAvailableNotes] = useState([]);
-    // eslint-disable-next-line no-unused-vars
-    const [socketConnected, setSocketConnected] = useState(socketRef.current?.connected);
-    const [noteToShare, setNoteToShare] = useState(null);
-    const [successMessage, setSuccessMessage] = useState("");
-    const [groupmsg, setgroupmsg] = useState([]);
-    const [chatState, setChatState] = useState("");
-  
+  const socketRef=useRef(null);
+  const [messages, setMessages] = useState([]);
+  const [msg, setMsg] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
+  const [availableNotes, setAvailableNotes] = useState([]);
+  // eslint-disable-next-line no-unused-vars
+  const [socketConnected, setSocketConnected] = useState(socketRef.current?.connected);
+  const [noteToShare, setNoteToShare] = useState(null);
+  const [successMessage, setSuccessMessage] = useState("");
+  const [groupmsg, setgroupmsg] = useState([]);
+  const [chatState, setChatState] = useState("");
   const typingTimeout = useRef(null);
   const bottomRef = useRef();
   const user = localStorage.getItem("user");
-  console.log(selectedUser.id);
-  console.log(selectedUser.type);
   
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -124,6 +121,7 @@ import axios from "axios";
   useEffect(() => {
     if (!selectedUser.id) return;
     setChatState(selectedUser.type);
+    setMessages([])
     const handleIncomingMessage = (data) => {
       console.log(data);
       if (data.from === selectedUser.id || data.to === selectedUser.id) {
