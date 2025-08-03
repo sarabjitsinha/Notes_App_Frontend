@@ -19,10 +19,11 @@ export default function ChatRequests({ refreshGroups }) {
       .then((res) => {
         console.log(res);
         const groups = res.data.filter(
-          (g) =>
-            !g.approvedBy
-              .map((id) => id.toString())
-              .includes(user._id.toString())
+          (g) => !g.approvedBy.includes(user._id)
+          // (g) =>
+          //   !g.approvedBy
+          //     .map((id) => id.toString())
+          //     .includes(user._id.toString())
         );
 
         setPendingGroups(groups);
