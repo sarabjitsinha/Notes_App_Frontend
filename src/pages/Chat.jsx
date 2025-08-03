@@ -11,7 +11,7 @@ export default function Chat() {
   return (
     <div className="flex flex-col">
       <Header/>
-      <div className="flex max-h-screen">
+      <div className="flex ">
       <ChatSidebar setActiveChat={setActiveChat} activeChat={activeChat} />
       <UserList onSelect={setSelectedUser} />
       {selectedUser && <ChatWindow selectedUser={selectedUser} />}
