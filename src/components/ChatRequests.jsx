@@ -1,50 +1,62 @@
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function ChatRequests({ refreshGroups }) {
   const [pendingGroups, setPendingGroups] = useState([]);
-  // eslint-disable-next-line no-unused-vars
   const [showAlert, setShowAlert] = useState(false);
 
   const token = localStorage.getItem("token");
- 
- const userId = localStorage.getItem("user");
+  const userId = localStorage.getItem("user");
 
   useEffect(() => {
     const fetchGroups = async () => {
       try {
-        const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/chat/groups`, {headers:{Authorization:`Bearer ${token}`}});
-        const data = res.data;
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/chat/groups`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
-        const filtered = data.filter((group) => {
-          const memberIds = group.members.map((m) => m.toString());
-          const approvedIds = group.approvedBy.map((a) => a.toString());
+        const groups = res.data || [];
+         
+   const filtered = groups.filter((group) => {
+  const memberIds = group.members.map((m) => m.toString());
+  const approvedIds = group.approvedBy?.map((a) => a.toString());
+  const rejectedIds = (group.rejectedBy || []).map((r) => r.toString());
 
-          return memberIds.includes(userId) && !approvedIds.includes(userId);
-        });
-
-
+  
+  return (
+    memberIds?.includes(userId) &&
+    ! approvedIds?.includes(userId) &&
+    !rejectedIds?.includes(userId)
+  );
+});
         setPendingGroups(filtered);
+        setShowAlert(filtered.length > 0);
       } catch (err) {
         console.error("Failed to fetch groups:", err);
       }
     };
 
-    fetchGroups();
-  }, [userId,token]);
-
+    if (token && userId) {
+      fetchGroups();
+    }
+  }, [token, userId, refreshGroups]); // Add refreshGroups to re-fetch if it's updated
 
   const respond = async (groupId, accept) => {
-    await axios.post(
-      `${import.meta.env.VITE_API_URL}/api/chat/respond`,
-      { groupId, accept },
-      {
-        headers: { Authorization: `Bearer ${token}` },
-      }
-    );
-    setPendingGroups((prev) => prev.filter((g) => g._id !== groupId));
-    refreshGroups();
+    try {
+      await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/chat/respond`,
+        { groupId, accept },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      setPendingGroups((prev) => prev.filter((g) => g._id !== groupId));
+      refreshGroups(); // update global chat list
+    } catch (err) {
+      console.error("Failed to respond to chat request:", err);
+    }
   };
 
   return (
@@ -61,18 +73,18 @@ export default function ChatRequests({ refreshGroups }) {
         <p className="text-sm text-gray-500">No pending requests</p>
       ) : (
         <ul className="mt-2 space-y-2">
-          {pendingGroups?.map((g) => (
-            <li key={g._id} className="border p-2 rounded">
-              <span className="block font-medium">{g.name}</span>
+          {pendingGroups.map((group) => (
+            <li key={group._id} className="border p-2 rounded">
+              <span className="block font-medium">{group.name}</span>
               <div className="mt-1 flex gap-2">
                 <button
-                  onClick={() => respond(g._id, true)}
+                  onClick={() => respond(group._id, true)}
                   className="bg-green-500 text-white px-2 py-1 rounded text-sm"
                 >
                   Accept
                 </button>
                 <button
-                  onClick={() => respond(g._id, false)}
+                  onClick={() => respond(group._id, false)}
                   className="bg-red-500 text-white px-2 py-1 rounded text-sm"
                 >
                   Reject

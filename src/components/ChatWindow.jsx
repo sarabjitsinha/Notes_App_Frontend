@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import axios from "axios";
+import ChatPrompt from "./ChatPrompt";
 
 export default function ChatWindow({ selectedUser }) {
   const socketRef = useRef(null);
@@ -18,6 +19,33 @@ export default function ChatWindow({ selectedUser }) {
   const typingTimeout = useRef(null);
   const bottomRef = useRef();
   const user = localStorage.getItem("user");
+  const [groupData, setGroupData] = useState(null);
+const [isRejected, setIsRejected] = useState(false);
+
+useEffect(() => {
+  const fetchGroupData = async () => {
+    if (selectedUser?.type === "group") {
+      try {
+        const res = await axios.get(
+          `${import.meta.env.VITE_API_URL}/api/chat/groups/${selectedUser.id}`,
+          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+        );
+        setGroupData(res.data);
+
+        const currentUserId = localStorage.getItem("user");
+        const isRejected = res.data.rejectedBy.includes(currentUserId);
+        const isApproved = res.data.approvedBy.includes(currentUserId);
+
+        setIsRejected(isRejected && !isApproved);
+      } catch (err) {
+        console.error("Failed to fetch group data:", err);
+      }
+    }
+  };
+
+  fetchGroupData();
+}, [selectedUser]);
+
 
   // Connect Socket.IO
   useEffect(() => {
@@ -173,6 +201,17 @@ export default function ChatWindow({ selectedUser }) {
     setNoteToShare(null);
   };
 
+  if (selectedUser?.type === "group" && isRejected) {
+  return (
+    <div className="p-4 border-l w-full flex flex-col h-[90vh] items-center justify-center">
+      <p className="text-red-600 text-lg font-semibold">
+        🚫 You are not authorized to join this group.
+      </p>
+    </div>
+  );
+}
+{groupData && <ChatPrompt group={groupData} />}
+
   const renderMessage = (m, i) => {
     const isMine = m.from === user;
     const bubble = isMine
@@ -272,4 +311,5 @@ export default function ChatWindow({ selectedUser }) {
       </div>
     </div>
   );
+  
 }
