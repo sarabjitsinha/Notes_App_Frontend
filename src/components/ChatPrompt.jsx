@@ -33,6 +33,11 @@ export default function ChatPrompt({ group }) {
     );
   }
 
+  if (group.rejectedBy.some(u => u._id === user._id) && !group.approvedBy.some(u => u._id === user._id)) {
+  return <p className="text-red-500">You are not authorized to chat in this group.</p>;
+}
+
+
   if (isRejected && !isApproved) {
     return <p className="text-red-500">You are not authorized to join this group.</p>;
   }
