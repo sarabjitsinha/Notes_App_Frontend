@@ -10,44 +10,42 @@ export default function ChatWindow({ selectedUser }) {
   const [typing, setTyping] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
   const [availableNotes, setAvailableNotes] = useState([]);
-  // eslint-disable-next-line no-unused-vars
-  const [socketConnected, setSocketConnected] = useState(false);
   const [noteToShare, setNoteToShare] = useState(null);
   const [successMessage, setSuccessMessage] = useState("");
-  const [groupmsg, setgroupmsg] = useState([]);
+  const [groupmsg, setgroupmsg] = useState({});
   const [chatState, setChatState] = useState("");
+  const [groupData, setGroupData] = useState(null);
+  const [isRejected, setIsRejected] = useState(false);
+  const [sharedNotes, setSharedNotes] = useState({});
   const typingTimeout = useRef(null);
   const bottomRef = useRef();
   const user = localStorage.getItem("user");
-  const [groupData, setGroupData] = useState(null);
-const [isRejected, setIsRejected] = useState(false);
-
-useEffect(() => {
-  const fetchGroupData = async () => {
-    if (selectedUser?.type === "group") {
-      try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_URL}/api/chat/groups/${selectedUser.id}`,
-          { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
-        );
-        setGroupData(res.data);
-
-        const currentUserId = localStorage.getItem("user");
-        const isRejected = res.data.rejectedBy.includes(currentUserId);
-        const isApproved = res.data.approvedBy.includes(currentUserId);
-
-        setIsRejected(isRejected && !isApproved);
-      } catch (err) {
-        console.error("Failed to fetch group data:", err);
+    console.log(selectedUser)
+  useEffect(() => {
+    const fetchGroupData = async () => {
+      if (selectedUser?.type === "group") {
+        try {
+          const res = await axios.get(
+            `${import.meta.env.VITE_API_URL}/api/chat/groups/${selectedUser.id}`,
+            { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
+          );
+          setGroupData(res.data);
+          const rejectedIds = res.data.rejectedBy.map((u) =>
+            typeof u === "object" ? u._id : u
+          );
+          const approvedIds = res.data.approvedBy.map((u) =>
+            typeof u === "object" ? u._id : u
+          );
+          setIsRejected(rejectedIds.includes(user) && !approvedIds.includes(user));
+        } catch (err) {
+          console.error("Failed to fetch group data:", err);
+        }
       }
-    }
-  };
+    };
 
-  fetchGroupData();
-}, [selectedUser]);
+    fetchGroupData();
+  }, [selectedUser]);
 
-
-  // Connect Socket.IO
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) return;
@@ -63,7 +61,6 @@ useEffect(() => {
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      setSocketConnected(true);
       console.log("✅ Socket connected:", socket.id);
     });
 
@@ -76,7 +73,6 @@ useEffect(() => {
     };
   }, []);
 
-  // Fetch Notes
   useEffect(() => {
     const fetchNotes = async () => {
       const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/notes`, {
@@ -87,30 +83,46 @@ useEffect(() => {
     fetchNotes();
   }, []);
 
-  // Group: Listen for incoming group-note shares
   useEffect(() => {
     socketRef.current?.on("note-shared", (payload) => {
-      setgroupmsg((prev) => [...prev, payload]);
-      setSuccessMessage("✅ Note shared successfully!");
-      setTimeout(() => setSuccessMessage(""), 3000);
+        console.log(payload)
+        console.log(selectedUser)
+     setSharedNotes((prev) => {
+     const existing = prev[selectedUser.id] || [];
+      return {
+        ...prev,
+        [selectedUser.id]: [...existing, payload],
+      };
     });
+    setSuccessMessage("✅ Note shared successfully!");
+    setTimeout(() => setSuccessMessage(""), 3000);
+});
 
-    return () => {
-      socketRef.current?.off("note-shared");
-    };
-  }, []);
+return () => {
+    socketRef.current?.off("note-shared");
+};
+}, [selectedUser]);
+console.log(groupmsg)
 
-  // Group: Join and handle group messages
   useEffect(() => {
-    if (selectedUser?.type === "group") {
+    if(selectedUser?.type!=="group") return
+    
       socketRef.current?.emit("join-group", { groupId: selectedUser.id });
-    }
+    
 
     const handleGroupMessage = (data) => {
-      if (data.groupId === selectedUser.id) {
-        setgroupmsg((prev) => [...prev, data]);
-      }
+      
+        
+        setgroupmsg((prev) =>{
+
+            const existing=prev[data.groupId] || []
+            return {...prev,
+                [data.groupId]:[...existing,data],
+                
+            }
+        } )
     };
+    
 
     socketRef.current?.on("group-message", handleGroupMessage);
     return () => {
@@ -118,7 +130,6 @@ useEffect(() => {
     };
   }, [selectedUser]);
 
-  // Private: Handle user-wise messages
   useEffect(() => {
     if (!selectedUser?.id) return;
     setChatState(selectedUser.type);
@@ -149,7 +160,6 @@ useEffect(() => {
     };
   }, [selectedUser]);
 
-  // Auto-scroll
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages, groupmsg]);
@@ -167,14 +177,18 @@ useEffect(() => {
 
     if (selectedUser.type === "private") {
       socketRef.current?.emit("private_message", messageData);
-    } else if (selectedUser.type === "group") {
-      socketRef.current?.emit("group-message", {
-        groupId: selectedUser.id,
-        content: msg,
-      });
+    } else if (selectedUser.type === "group" && !isRejected) {
+
+        const newMsg = {
+    groupId: selectedUser.id,
+    content: msg,
+    sender: user,
+    timestamp: new Date(),
+  };
+      socketRef.current?.emit("group-message", newMsg       );
     }
 
-    setMsg(""); // Clear input
+    setMsg("");
   };
 
   const handleTyping = () => {
@@ -192,7 +206,8 @@ useEffect(() => {
 
   const handleShareNote = () => {
     if (!noteToShare || selectedUser.type !== "group") return;
-
+        console.log("share note inside")
+    
     socketRef.current?.emit("share-note", {
       groupId: selectedUser.id,
       note: noteToShare,
@@ -202,16 +217,24 @@ useEffect(() => {
   };
 
   if (selectedUser?.type === "group" && isRejected) {
-  return (
-    <div className="p-4 border-l w-full flex flex-col h-[90vh] items-center justify-center">
-      <p className="text-red-600 text-lg font-semibold">
-        🚫 You are not authorized to join this group.
-      </p>
-    </div>
-  );
-}
-{groupData && <ChatPrompt group={groupData} />}
+    return (
+      <div className="p-4 border-l w-full flex flex-col h-[90vh] items-center justify-center">
+        <p className="text-red-600 text-lg font-semibold">
+          🚫 You are not authorized to join this group.
+        </p>
+      </div>
+    );
+  }
 
+  {chatState==="group" &&  (sharedNotes[selectedUser.id] || []).map((n, idx) => (
+      
+    <div key={`note-${idx}`} className="bg-yellow-100 p-2 rounded max-w-[70%]">
+      📝 Shared Note: <strong>{n.note?.title}</strong>
+      <div className="text-xs text-gray-600">
+        {n.note?.content?.slice(0, 50)}...
+      </div>
+    </div>
+  ))}
   const renderMessage = (m, i) => {
     const isMine = m.from === user;
     const bubble = isMine
@@ -233,26 +256,31 @@ useEffect(() => {
         Chat with {selectedUser?.username || selectedUser?.name}
       </h2>
 
+      {groupData && <ChatPrompt group={groupData} />}
+
       <div className="flex-1 overflow-y-auto bg-gray-100 p-2 rounded space-y-1 ">
         {chatState === "private"
           ? (chatMessages[selectedUser.id] || []).map((m, i) => renderMessage(m, i))
-          : groupmsg.map((m, idx) => {
-              if (m.note) {
-                return (
-                  <div key={idx} className="bg-yellow-100 p-2 rounded max-w-[70%]">
-                    📝 Shared Note: <strong>{m.note.title}</strong>
-                    <div className="text-xs text-gray-600">
-                      {m.note.content.slice(0, 50)}...
-                    </div>
-                  </div>
-                );
-              }
+          : (groupmsg[selectedUser.id] || []).map((m, idx) => {
+             
+            //   if (m.note) {
+            //     return (
+            //       <div key={idx} className="bg-yellow-100 p-2 rounded max-w-[70%]">
+            //         📝 Shared Note: <strong>{m.note.title}</strong>
+            //         <div className="text-xs text-gray-600">
+            //           {m.note.content.slice(0, 50)}...
+            //         </div>
+            //       </div>
+            //     );
+            //   }
               return (
                 <div key={idx} className="bg-gray-300 p-2 rounded max-w-[70%]">
                   {m.content}
                 </div>
               );
             })}
+
+            
 
         {isTyping && (
           <p className="text-sm italic text-gray-600 mt-2">Typing...</p>
@@ -301,15 +329,16 @@ useEffect(() => {
           onChange={(e) => setMsg(e.target.value)}
           onInput={handleTyping}
           placeholder="Type your message..."
+          disabled={selectedUser?.type === "group" && isRejected}
         />
         <button
           onClick={handleSend}
           className="bg-blue-600 text-white px-4 py-1 rounded"
+          disabled={selectedUser?.type === "group" && isRejected}
         >
           Send
         </button>
       </div>
     </div>
   );
-  
 }
