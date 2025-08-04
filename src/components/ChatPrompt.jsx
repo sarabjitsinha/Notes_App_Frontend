@@ -1,4 +1,4 @@
-import { useAuth } from "../context/AuthContext"; // Assuming this provides `user`
+import { useAuth } from "../context/AuthContext";
 import axios from "axios";
 
 export default function ChatPrompt({ group }) {
