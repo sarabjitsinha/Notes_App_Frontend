@@ -99,8 +99,8 @@ export default function ChatWindow({ selectedUser }) {
 return () => {
     socketRef.current?.off("note-shared");
 };
-}, [selectedUser]);
-console.log(groupmsg)
+}, [selectedUser,selectedUser.id]);
+
 
   useEffect(() => {
     if(selectedUser?.type!=="group") return
@@ -258,25 +258,24 @@ console.log(groupmsg)
 
       <div className="flex-1 overflow-y-auto bg-gray-100 p-2 rounded space-y-1 ">
         {chatState === "private"
-          ? (chatMessages[selectedUser.id] || []).map((m, i) => renderMessage(m, i))
-          : (groupmsg[selectedUser.id] || []).map((m, idx) => {
-             
-            //   if (m.note) {
-            //     return (
-            //       <div key={idx} className="bg-yellow-100 p-2 rounded max-w-[70%]">
-            //         📝 Shared Note: <strong>{m.note.title}</strong>
-            //         <div className="text-xs text-gray-600">
-            //           {m.note.content.slice(0, 50)}...
-            //         </div>
-            //       </div>
-            //     );
-            //   }
-              return (
-                <div key={idx} className="bg-gray-300 p-2 rounded max-w-[70%]">
-                  {m.content}
-                </div>
-              );
-            })}
+          ? (chatMessages[selectedUser.id] || []).map((m, i) => renderMessage(m, i)) :
+        
+        <>
+      {(sharedNotes[selectedUser.id] || []).map((n, idx) => (
+        <div key={`note-${idx}`} className="bg-yellow-100 p-2 rounded max-w-[70%]">
+          📝 Shared Note: <strong>{n.note?.title}</strong>
+          <div className="text-xs text-gray-600">
+            {n.note?.content?.slice(0, 50)}...
+          </div>
+        </div>
+      ))}
+      {(groupmsg[selectedUser.id] || []).map((m, idx) => (
+        <div key={idx} className="bg-gray-300 p-2 rounded max-w-[70%]">
+          {m.content}
+        </div>
+      ))}
+    </>
+        }
 
             
 
