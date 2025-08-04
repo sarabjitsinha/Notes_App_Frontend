@@ -85,9 +85,7 @@ export default function ChatWindow({ selectedUser }) {
 
   useEffect(() => {
     socketRef.current?.on("note-shared", (payload) => {
-        console.log(payload)
-        console.log(selectedUser)
-     setSharedNotes((prev) => {
+        setSharedNotes((prev) => {
      const existing = prev[selectedUser.id] || [];
       return {
         ...prev,
