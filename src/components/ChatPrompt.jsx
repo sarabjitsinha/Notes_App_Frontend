@@ -46,7 +46,7 @@ export default function ChatPrompt({ group }) {
         { groupId: group._id, accept },
         { headers: { Authorization: `Bearer ${localStorage.getItem("token")}` } }
       );
-      window.location.reload(); // Or re-fetch group data
+      window.location.reload(); 
     } catch (err) {
       console.error(err);
     }

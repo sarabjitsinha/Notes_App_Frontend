@@ -10,7 +10,7 @@
 //   useEffect(() => {
 //     const sock = io("http://localhost:5000", {
 //       auth: {
-//         token: localStorage.getItem("token") // or use cookies
+//         token: localStorage.getItem("token") 
 //       }
 //     });
 
@@ -36,7 +36,7 @@
 //   const [socket, setSocket] = useState(null);
 
 //   useEffect(() => {
-//     const token = localStorage.getItem("token"); // or get cookie if stored there
+//     const token = localStorage.getItem("token"); 
     
 //     const socketInstance = io(import.meta.env.VITE_API_URL, {
 //       auth:{
